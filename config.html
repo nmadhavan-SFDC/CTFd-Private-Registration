@@ -1,0 +1,387 @@
+{% extends "admin/base.html" %}
+
+{% block stylesheets %}
+<style>
+td { text-align:center; }
+.checkbox { margin: 0px !important; }
+input[type="checkbox"] { margin: 0px !important; position: relative; top: 5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <br>
+    <h1>Private Registration</h1>
+    <div id="confirm" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h2 class="text-center">Delete Invited Team</h2>
+                </div>
+                <div class="modal-body" style="height:110px">
+                    <div class="row-fluid">
+                        <div class="col-md-12">
+                            <form method="POST">
+                                <input type="hidden" name="route">
+                                <input id="nonce" type="hidden" name="nonce" value="{{ nonce }}">
+                                <div class="small-6 small-centered text-center columns">
+                                    <p>Are you sure you want to delete <strong id="confirm-team-name"></strong>?</p>
+                                    <button type="button" data-dismiss="modal" class="btn btn-theme btn-outlined">No</button>
+                                    <button type="button" id="delete-invited-team" class="btn btn-theme btn-outlined">Yes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="confirm-remove-all" class="modal fade" tabindex="-2">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h2 class="text-center">Remove All</h2>
+                </div>
+                <div class="modal-body" style="height:110px">
+                    <div class="row-fluid">
+                        <div class="col-md-12">
+                            <form method="POST">
+                                <input type="hidden" name="route">
+                                <input id="nonce" type="hidden" name="nonce" value="{{ nonce }}">
+                                <div class="small-6 small-centered text-center columns">
+                                    <p>Are you sure you want to <strong id="confirm-team-name">remove all invited teams</strong>?</p>
+                                    <button type="button" data-dismiss="modal" class="btn btn-theme btn-outlined">No</button>
+                                    <button type="button" id="remove-all" class="btn btn-theme btn-outlined">Yes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="confirm-invite" class="modal fade" tabindex="-2">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h2 class="text-center">Send Invitation</h2>
+                </div>
+                <div class="modal-body" style="height:110px">
+                    <div class="row-fluid">
+                        <div class="col-md-12">
+                            <form method="POST">
+                                <input type="hidden" name="route">
+                                <input id="nonce" type="hidden" name="nonce" value="{{ nonce }}">
+                                <div class="small-6 small-centered text-center columns">
+                                    <p>This will send invitation <span id="invite-mode"></span> to <span id="invite-target"></span>. Proceed?</p>
+                                    <button type="button" data-dismiss="modal" class="btn btn-theme btn-outlined">No</button>
+                                    <button type="button" id="invite" class="btn btn-theme btn-outlined">Yes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <div id="messages">
+        </div>
+
+        <div id="errors">
+        </div>
+
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active">
+                        <a href="#option" aria-controls="option" role="tab" data-toggle="tab">Option</a>
+                    </li>
+                    <li role="presentation">
+                        <a href="#invite-team" aria-controls="invite-team" role="tab" data-toggle="tab">Invite</a>
+                    </li>
+                    <li role="presentation">
+                        <a href="#invited-teams" aria-controls="invited_teams" role="tab" data-toggle="tab">Invited Teams</a>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="option">
+                        <div class="row">
+                            <form method="POST">
+                                <input id="nonce" name='nonce' type='hidden' value="{{ nonce }}">
+
+                                <div class="form-group col-xs-12">
+                                    <div class="radio">
+                                        <label>
+                                            <input id="token-option" name="selected_option" value="token" type="radio" {% if get_config("private_registration_option") == "token" %} checked {% endif %}>Invited teams need to fill in a unique token for registration
+                                        </label>
+                                    </div>
+                                    <div class="radio">
+                                        <label>
+                                            <input id="email-option" name="selected_option" value="email" type="radio" {% if get_config("private_registration_option") == "email" %} checked {% endif %}>Invited teams only need to fill in the invited email address
+                                        </label>
+                                    </div>
+
+                                    <input id="update" type="submit" class="btn btn-default" value="Update">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="invite-team">
+                        <div class="row">
+                            <br>
+                            <form method="POST" enctype="multipart/form-data">
+                                <input id="nonce" name='nonce' type='hidden' value="{{ nonce }}">
+                                <div class="form-group col-xs-6">
+                                    <p>
+                                        Use CSV format with invited team name and email for each line.
+                                    </p>
+                                    <label>
+                                        Example
+                                    </label>
+                                    <pre>Team1,team1@email.com&#10;Team XYZ,teamxyz@email.com&#10;"Team,comma",teamcomma@email.com&#10;"Team,comma""quote""",teamcommaquote@email.com</pre>
+                                    <label for="container-files">Import CSV
+                                        <input type="file" name="invited_teams" id="import-file" accept=".csv">
+                                    </label>
+                                </div>
+                                <div class="form-group col-xs-8">
+                                    <input id="invite-button" type="submit" class="btn btn-default" value="Invite">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="invited-teams">
+                        <br>
+                        <div class="row">
+                            <div class="form-group col-xs-4 text-center">
+                                <input id="remove-button" type="submit" class="btn btn-default" value="Remove All">
+                            </div>
+                            <div class="form-group col-xs-4 text-center">
+                               <form method="GET" action="{{ request.script_root }}/admin/invited_teams/export">
+                                    <input id="nonce" name='nonce' type='hidden' value="{{ nonce }}">
+                                    <input id="export-button" type="submit" class="btn btn-default" value="Export CSV">
+                                </form>
+                            </div>
+                            <div class="form-group col-xs-4 text-center">
+                                <input id="nonce" name='nonce' type='hidden' value="{{ nonce }}">
+                                    <input id="invite-all-button" type="submit" class="btn btn-default" value="Invite All by Email" {% if get_config("private_registration_option") == "email" or not can_send_mail() %}disabled{% endif %}>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-xs-12">
+                                <table id="teamsboard" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td width="10px" class="text-center"><b>ID</b>
+                                            </td>
+                                            <td class="text-center"><b>Team</b>
+                                            </td>
+                                            <td class="text-center"><b>Email</b>
+                                            </td>
+                                            <td class="text-center"><b>Token</b>
+                                            </td>
+                                            <td class="text-center"><b>Registered</b>
+                                            <td class="text-center"><b>Settings</b>
+                                            </td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        //http://stackoverflow.com/a/2648463 - wizardry!
+        String.prototype.format = String.prototype.f = function() {
+            var s = this,
+                i = arguments.length;
+
+            while (i--) {
+                s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+            }
+            return s;
+        };
+
+        function load_confirm_modal(id, name){
+            var modal = $('#confirm');
+            modal.find('input[name=id]').val(id);
+            modal.find('#confirm-team-name').text(name);
+            $('#confirm form').attr('action', '{{ request.script_root }}/admin/invited_teams/delete/' + id);
+            $('#confirm').modal();
+        }
+
+        function load_confirm_modal_remove_all(){
+            $('#confirm-remove-all form').attr('action', '{{ request.script_root }}/admin/invited_teams/delete/all');
+            $('#confirm-remove-all').modal();
+        }
+
+        function load_confirm_modal_invite_all(){
+            $('#confirm-invite form').attr('action', '{{ request.script_root }}/admin/invited_teams/send_invitation');
+            {% if get_config('private_registration_option') == 'token' %}$('#invite-mode').text('(token)');{% endif %}
+            $('#invite-target').text('all unregistered invited emails')
+            $('#confirm-invite').modal();
+        }
+
+        $('#remove-button').click(function(){
+            load_confirm_modal_remove_all();
+        });
+
+        $('#invite-all-button').click(function(){
+            load_confirm_modal_invite_all();
+        });
+
+        $('#delete-invited-team').click(function(e){
+            e.preventDefault();
+            $.post($('#confirm form').attr('action'), $('#confirm form').serialize(), function(data){
+                var data = $.parseJSON(JSON.stringify(data));
+                if (data == "1"){
+                    location.reload();
+                }
+            })
+        });
+
+        $('#remove-all').click(function(e){
+            e.preventDefault();
+            $.post($('#confirm-remove-all form').attr('action'), $('#confirm form').serialize(), function(data){
+                var data = $.parseJSON(JSON.stringify(data));
+                if (data == "1"){
+                    location.reload();
+                }
+            })
+        });
+
+        $('#invite').click(function(e){
+            e.preventDefault();
+            $.post($('#confirm-invite form').attr('action'), $('#confirm form').serialize(), function(data){
+                var data = $.parseJSON(JSON.stringify(data));
+                if (data == "1"){
+                    location.reload();
+                }
+            })
+        });
+
+        $('#update').click(function(e){
+            e.preventDefault();
+            $.post(script_root + "/admin/invited_teams/option", {
+                'nonce': $('#nonce').val(),
+                'selected_option': $("[name='selected_option']:checked").val()
+            }, function (data) {
+                data = $.parseJSON(JSON.stringify(data));
+                if (data == "1") {
+                    location.reload();
+                }
+            });
+        });
+
+        $('#send-button').click(function(e){
+            e.preventDefault();
+            $.post(script_root + "/admin/invited_teams/send_invitation", {
+                'nonce': $('#nonce').val()
+            }, function (data) {
+                data = $.parseJSON(JSON.stringify(data));
+                if (data == "1") {
+                    location.reload();
+                }
+            });
+        });
+
+        function escapeHTML(html) {
+            return html
+                .replace(/&/g, '&amp;')
+                .replace(/>/g, '&gt;')
+                .replace(/</g, '&lt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        function load_invited_teams(){
+            $('#teamsboard > tbody').empty();
+            $.get(script_root + "/admin/invited_teams/", function (data) {
+                data = $.parseJSON(JSON.stringify(data));
+                invited_teams = data['invited_teams'];
+
+                for (var i = 0; i < invited_teams.length; i++) {
+                    var id = invited_teams[i].id;
+                    var name = invited_teams[i].name;
+                    var email = invited_teams[i].email;
+                    var token = invited_teams[i].token;
+                    var registered = invited_teams[i].registered;
+                    var td_team_id = '<td class="team-id" value="{0}">{0}</td>'.format(id);
+                    var td_team_name = '<td class="team-name" value="{0}">{0}</td>'.format(escapeHTML(name));
+                    var td_team_email = '<td class="team-email" value="{0}">{0}</td>'.format(email);
+                    var td_team_token = '<td class="team-token" value="{0}">{0}</td>'.format(token);
+                    var td_team_registered = '<td class="team-registered"><input type="checkbox" {0} disabled></td>'.format(registered ? 'checked' : '');
+                    var td_team_delete = '<td class="text-center"><span><i class="fa fa-times" data-toggle="tooltip" data-placement="top" title="Delete invitation to {0}"></i></span></td>'.format(name);
+                    var tr_team = '<tr name="{0}">{1}{2}{3}{4}{5}{6}</tr>'.format(id, td_team_id, td_team_name, td_team_email, td_team_token, td_team_registered, td_team_delete);
+                    $('#teamsboard > tbody').append(tr_team);
+                }
+
+                $('.fa-times').click(function(){
+                    var elem = $(this).parent().parent().parent();
+                    var id = elem.find('.team-id').text().trim();
+                    var name = elem.find('.team-name').text().trim();
+                    load_confirm_modal(id, name);
+                });
+            });
+        }
+
+        $('#invite-button').click(function(e){
+            e.preventDefault();
+
+            var import_file = document.getElementById('import-file').files[0];
+            var nonce = $('#nonce').val();
+
+            var form_data = new FormData();
+            form_data.append('invited_teams', import_file);
+            form_data.append('nonce', nonce);
+
+            $.ajax({
+                url : script_root + '/admin/invited_teams/import',
+                type : 'POST',
+                data : form_data,
+                processData: false,
+                contentType: false,
+                statusCode: {
+                        500: function(resp) {
+                            console.log(resp.responseText);
+                            alert(resp.responseText);
+                        }
+                },
+                success : function(data) {
+                    data = $.parseJSON(JSON.stringify(data));
+                    if (data != "0") {
+                        var messages = data['messages'];
+                        var errors = data['errors'];
+
+                        for (var i = 0; i < messages.length; i++) {
+                            var message = '<div class="alert alert-info alert-dismissable" role="alert"><span class="sr-only">Message:</span>{0}<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button></div>'.format(messages[i]);
+                            $('#messages').append(message);
+                        }
+
+                        for (var i = 0; i < errors.length; i++) {
+                            var error = '<div class="alert alert-danger alert-dismissable" role="alert"><span class="sr-only">Message:</span>{0}<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button></div>'.format(errors[i]);
+                            $('#errors').append(error);
+                        }
+                    }
+                    load_invited_teams();
+                }
+            });
+        });
+
+        $(function(){
+            load_invited_teams();
+        })
+    </script>
+{% endblock %}
