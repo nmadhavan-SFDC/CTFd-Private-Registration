@@ -7,10 +7,10 @@ from .model import InvitedTeams
 from .register import private_register
 
 from CTFd.models import db, Teams
-from CTFd.utils import admins_only, cache, override_template
-
 from CTFd import utils
-
+from CTFd.utils.decorators import admins_only
+from CTFd.cache import cache
+from CTFd.utils.plugins import override_template
 
 def override_register_template():
     dir_path = path.dirname(path.realpath(__file__))
